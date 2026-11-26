@@ -1,0 +1,3 @@
+#!/bin/sh
+# Format and lint staged files only
+npx lint-staged

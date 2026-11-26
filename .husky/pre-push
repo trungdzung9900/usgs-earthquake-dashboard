@@ -1,0 +1,16 @@
+#!/bin/sh
+set -e
+
+echo "▶ Type checking backend..."
+(cd backend && npx tsc --noEmit)
+
+echo "▶ Type checking frontend..."
+(cd frontend && npx tsc --noEmit -p tsconfig.app.json)
+
+echo "▶ Linting backend..."
+npm run lint --workspace=backend
+
+echo "▶ Linting frontend..."
+npm run lint --workspace=frontend
+
+echo "✓ All checks passed"
