@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/Dustin/usgs-earthquake-dashboard log --oneline)",
+      "Bash(git -C /Users/Dustin/usgs-earthquake-dashboard remote -v)"
+    ]
+  }
+}
