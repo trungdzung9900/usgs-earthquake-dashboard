@@ -6,7 +6,7 @@ services:
     region: singapore
     plan: free
     buildCommand: npm install && npm run build --workspace=backend
-    startCommand: node backend/dist/main.js
+    startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
