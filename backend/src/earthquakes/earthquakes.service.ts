@@ -9,40 +9,97 @@ const EMPTY_COLLECTION = {
   features: [],
 };
 
+// ─── In-memory response cache ─────────────────────────────────────────────────
+// Caches USGS API responses to avoid redundant third-party calls.
+// Shared motivation: if USGS introduces rate limits or per-call pricing in
+// future, this layer absorbs repeated identical requests at zero extra cost.
+
+const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes — matches USGS near-realtime cadence
+
+interface CacheEntry {
+  data: unknown;
+  expiresAt: number;
+}
+
 @Injectable()
 export class EarthquakesService {
-  async count(dto: EarthquakeQueryDto): Promise<{ count: number; maxAllowed: number }> {
+  private readonly cache = new Map<string, CacheEntry>();
+
+  private getCached<T>(key: string): T | null {
+    const entry = this.cache.get(key);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      return null;
+    }
+    return entry.data as T;
+  }
+
+  private setCache(key: string, data: unknown): void {
+    this.cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS });
+  }
+
+  async count(
+    dto: EarthquakeQueryDto,
+  ): Promise<{ count: number; maxAllowed: number }> {
     const params = this.buildParams(dto);
+    const key = `count:${params.toString()}`;
+
+    const cached = this.getCached<{ count: number; maxAllowed: number }>(key);
+    if (cached) return cached;
+
     const res = await fetch(`${USGS_BASE}/count?${params}`);
 
-    if (res.status === 204) return { count: 0, maxAllowed: 20000 };
+    let result: { count: number; maxAllowed: number };
+    if (res.status === 204) {
+      result = { count: 0, maxAllowed: 20000 };
+    } else {
+      const data = (await res.json()) as {
+        count: number;
+        maxAllowed: number;
+        error?: string;
+      };
+      result = { count: data.count, maxAllowed: data.maxAllowed };
+    }
 
-    const data = (await res.json()) as { count: number; maxAllowed: number; error?: string };
-    return { count: data.count, maxAllowed: data.maxAllowed };
+    this.setCache(key, result);
+    return result;
   }
 
   async query(dto: EarthquakeQueryDto): Promise<unknown> {
+    const params = this.buildParams(dto);
+    const key = `query:${params.toString()}`;
+
+    const cached = this.getCached<unknown>(key);
+    if (cached) return cached;
+
     const { count } = await this.count(dto);
 
     if (count > 20000) {
       throw new HttpException({ error: 'too_many_events', count }, 422);
     }
 
-    if (count === 0) return EMPTY_COLLECTION;
+    let result: unknown;
+    if (count === 0) {
+      result = EMPTY_COLLECTION;
+    } else {
+      const res = await fetch(`${USGS_BASE}/query?${params}`);
+      result = res.status === 204 ? EMPTY_COLLECTION : await res.json();
+    }
 
-    const params = this.buildParams(dto);
-    const res = await fetch(`${USGS_BASE}/query?${params}`);
-
-    if (res.status === 204) return EMPTY_COLLECTION;
-
-    return res.json();
+    this.setCache(key, result);
+    return result;
   }
 
   private buildParams(dto: EarthquakeQueryDto): URLSearchParams {
     let { minlongitude, maxlongitude, minlatitude, maxlatitude, ...rest } = dto;
 
     // Antimeridian: minLon > maxLon means the box wraps — add 360 to max
-    if (minlongitude !== undefined && maxlongitude !== undefined && minlongitude > maxlongitude) {
+    if (
+      minlongitude !== undefined &&
+      maxlongitude !== undefined &&
+      minlongitude > maxlongitude
+    ) {
       maxlongitude += 360;
     }
 

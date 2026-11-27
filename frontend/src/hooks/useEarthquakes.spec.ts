@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import * as api from '../api/earthquakes'
-import { useEarthquakes } from './useEarthquakes'
+import { clearEarthquakeCache, useEarthquakes } from './useEarthquakes'
 
 vi.mock('../api/earthquakes', () => ({
   fetchEarthquakes: vi.fn(),
@@ -25,6 +25,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers()
   vi.clearAllMocks()
+  clearEarthquakeCache()
 })
 
 async function tick() {

@@ -100,6 +100,61 @@ Serve `frontend/dist/` with any static file server (nginx, Caddy, etc.) and prox
 
 ---
 
+## Deploying to Render (free)
+
+The repo includes a `render.yaml` blueprint that provisions both services automatically.
+
+### One-time setup
+
+**1. Push the repo to GitHub** (or GitLab / Bitbucket).
+
+**2. Create a Render account** at [render.com](https://render.com) if you don't have one.
+
+**3. Connect the repo via Blueprint**
+
+- In the Render dashboard go to **New → Blueprint**
+- Select your repository
+- Render reads `render.yaml` and creates both services
+
+**4. Wait for the first deploy to finish**
+
+Both services build and deploy. The free tier takes 2–5 minutes on first build.
+
+**5. Note the service URLs**
+
+Render assigns each service a URL like:
+
+| Service | URL |
+|---|---|
+| Backend | `https://usgs-eq-backend.onrender.com` |
+| Frontend | `https://usgs-eq-frontend.onrender.com` |
+
+> If the names `usgs-eq-backend` / `usgs-eq-frontend` are already taken on Render, change them in `render.yaml` before deploying and update the two URLs below accordingly.
+
+**6. Cross-wire the URLs** (only needed if you changed the service names)
+
+In `render.yaml`, two values reference the service URLs:
+
+```yaml
+# Backend env var — tells the backend which frontend origin to allow via CORS
+FRONTEND_URL: https://usgs-eq-frontend.onrender.com
+
+# Frontend build env var — tells the frontend where to send API requests
+VITE_API_BASE_URL: https://usgs-eq-backend.onrender.com
+```
+
+If you kept the default names, they're already correct. If you renamed either service, update both values, commit, and redeploy.
+
+### Subsequent deploys
+
+Push to the connected branch — Render automatically rebuilds and redeploys both services.
+
+### Free tier note
+
+Render's free web services spin down after 15 minutes of inactivity. The first request after a sleep takes ~30 seconds while the backend wakes up. Upgrade to the Starter plan ($7/month) to keep it always-on.
+
+---
+
 ## Running tests
 
 ```bash

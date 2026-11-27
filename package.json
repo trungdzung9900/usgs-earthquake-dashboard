@@ -1,6 +1,7 @@
 {
   "name": "usgs-earthquake-dashboard",
   "private": true,
+  "engines": { "node": ">=20" },
   "workspaces": [
     "backend",
     "frontend"

@@ -51,6 +51,10 @@ export interface TooManyError {
   count: number
 }
 
+// In development the Vite proxy rewrites /api → http://localhost:3000.
+// In production set VITE_API_BASE_URL to the full backend origin (no trailing slash).
+const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? '/api'
+
 function toQueryString(filters: EarthquakeFilters): string {
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(filters)) {
@@ -59,10 +63,8 @@ function toQueryString(filters: EarthquakeFilters): string {
   return params.toString()
 }
 
-export async function fetchEarthquakes(
-  filters: EarthquakeFilters,
-): Promise<EarthquakeCollection> {
-  const res = await fetch(`/api/earthquakes?${toQueryString(filters)}`)
+export async function fetchEarthquakes(filters: EarthquakeFilters): Promise<EarthquakeCollection> {
+  const res = await fetch(`${API_BASE}/earthquakes?${toQueryString(filters)}`)
   if (res.status === 422) {
     const body = (await res.json()) as TooManyError
     throw Object.assign(new Error('too_many_events'), body)
@@ -72,7 +74,7 @@ export async function fetchEarthquakes(
 }
 
 export async function fetchCount(filters: EarthquakeFilters): Promise<CountResult> {
-  const res = await fetch(`/api/earthquakes/count?${toQueryString(filters)}`)
+  const res = await fetch(`${API_BASE}/earthquakes/count?${toQueryString(filters)}`)
   if (!res.ok) throw new Error('Could not load earthquake data. Please try again.')
   return res.json() as Promise<CountResult>
 }
