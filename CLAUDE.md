@@ -82,6 +82,35 @@ GET /earthquakes/count?starttime=&endtime=&minmagnitude=&[bbox params]
 
 All params are query string. `starttime` and `endtime` (ISO 8601) are required. Returns GeoJSON FeatureCollection. Frontend proxies via Vite (`/api` → `http://localhost:3000`).
 
+## Testing
+
+**Runner:** Vitest only — no Jest. `@testing-library/jest-dom` is a DOM assertion library, not Jest.
+
+**Backend** (`backend/`) — Vitest 4
+```bash
+npm test --workspace=backend          # unit tests (*.spec.ts beside source)
+npm run test:e2e --workspace=backend  # e2e tests (test/*.e2e-spec.ts, hits live USGS API)
+npm run test:cov --workspace=backend  # coverage
+```
+- Setup file: `backend/vitest.setup.ts` — imports `reflect-metadata` (required before any NestJS-decorated class)
+- Unit tests instantiate classes directly (`new EarthquakesService()`) to avoid decorator-metadata DI issues with esbuild
+- Fetch is mocked via `vi.spyOn(globalThis, 'fetch')`
+- `buildParams` normalisation is tested indirectly by checking the URL passed to `fetch`
+
+**Frontend** (`frontend/`) — Vitest 5
+```bash
+npm test --workspace=frontend         # unit tests (src/**/*.spec.{ts,tsx})
+```
+- Environment: `jsdom` with `@testing-library/react`
+- Setup file: `frontend/src/test/setup.ts` — imports `@testing-library/jest-dom`
+- Leaflet is fully mocked in `MapView.spec.tsx` via `vi.hoisted` + `vi.mock('leaflet', ...)`
+- `useEarthquakes` debounce tests use `vi.useFakeTimers()` + `vi.runAllTimersAsync()`
+- API modules mocked with `vi.mock('../api/earthquakes', ...)` where needed
+
+**What is NOT tested here:**
+- 422 too-many-events via e2e (covered by unit test; USGS count endpoint is too slow for large ranges)
+- MapView Leaflet DOM rendering (Leaflet requires a real browser layout engine)
+
 ## Decisions
 
 See `DECISIONS.md` for all recorded architecture decisions.
