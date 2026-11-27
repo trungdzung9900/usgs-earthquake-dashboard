@@ -4,8 +4,11 @@ set -e
 echo "▶ Type checking backend..."
 (cd backend && npx tsc --noEmit)
 
-echo "▶ Type checking frontend..."
+echo "▶ Type checking frontend (app)..."
 (cd frontend && npx tsc --noEmit -p tsconfig.app.json)
+
+echo "▶ Type checking frontend (tests)..."
+(cd frontend && npx tsc --noEmit -p tsconfig.test.json)
 
 echo "▶ Linting backend..."
 npm run lint --workspace=backend

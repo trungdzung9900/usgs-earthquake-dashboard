@@ -8,5 +8,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.spec.{ts,tsx}'],
+    typecheck: { tsconfig: './tsconfig.test.json' },
   },
 })
